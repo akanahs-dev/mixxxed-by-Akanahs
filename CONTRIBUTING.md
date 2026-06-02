@@ -14,7 +14,7 @@ chat](https://mixxx.zulipchat.com/) before starting to contribute code to Mixxx.
    - [Important Guidelines and Policies](#important-guidelines-and-policies)
    - [Git Repositories](#git-repositories)
 2. [Getting Started](#getting-started)
-3. [Pre-commit Setup](#pre-commit)
+3. [Pre-commit Setup](#pre-commit-setup)
 4. [Code Style](#code-style)
    - [Code Formatting](#code-formatting)
    - [C++ Conventions](#c-conventions)
@@ -35,7 +35,7 @@ We have lots more helpful information for users and developers on the [Mixxx wik
 ### Important Guidelines and Policies
 
 - [Git Workflow](#git-workflow)
-- [Coding Guidelines](https://github.com/mixxxdj/mixxx/wiki/Coding-Guidelines) & [Setting up `pre-commit`](#pre-commit)
+- [Coding Guidelines](https://github.com/mixxxdj/mixxx/wiki/Coding-Guidelines) & [Setting up `pre-commit`](#pre-commit-setup)
 - [Minimum Requirements Policy](https://github.com/mixxxdj/mixxx/wiki/Minimum-requirements-policy)
 - [Internationalization Workflow](https://github.com/mixxxdj/mixxx/wiki/Internationalization)
 - [Release Checklist](https://github.com/mixxxdj/mixxx/wiki/Release-Checklist-2.5.0)
@@ -88,7 +88,7 @@ All of these are automatically built and deployed by [GitHub Actions](https://gi
     | Debian/Ubuntu | `tools/debian_buildenv.sh setup` | ~200 MB download, ~1 GB disk space |
     | Fedora | `tools/rpm_buildenv.sh setup` | ~200 MB download, ~1 GB disk space |
     | Flatpak | `tools/flatpak_buildenv.sh setup` | ~2.6 GB download, ~5 GB disk space |
-    | Android | `tools/android_buildenv.sh setup` (see the [wiki article](<https://github.com/mixxxdj/mixxx/wiki/> Building-for-Android)) | ~3.4 GB download, 13GB disk space |
+    | Android | `tools/android_buildenv.sh setup` (see the [wiki article](https://github.com/mixxxdj/mixxx/wiki/Building-for-Android)) | ~3.4 GB download, 13GB disk space |
     | Other Linux distros | See the [wiki article](https://github.com/mixxxdj/mixxx/wiki/Compiling%20on%20Linux) | |
 
     Other platforms: see the wiki's
@@ -100,10 +100,11 @@ All of these are automatically built and deployed by [GitHub Actions](https://gi
      mkdir build && cd build
      cmake ..
      cmake --build . --parallel $(nproc)
+     ```
 
-     There should now be a `mixxx` executable in the current directory that you can run. Alternatively, can generate a package using   `cpack`.
+     There should now be a `mixxx` executable in the current directory that you can run. Alternatively, can generate a package using `cpack`.
 
-     For building and installing Mixxx as a Flatpak, check the documentation in [packaging/flatpak/README.md](packaging/flatpak/  README.md).
+     For building and installing Mixxx as a Flatpak, check the documentation in [packaging/flatpak/README.md](packaging/flatpak/README.md).
 
      Detailed build instructions for each target OS can be found [on the wiki](https://github.com/mixxxdj/mixxx/wiki#compile-mixxx-from-source-code)
 
@@ -111,7 +112,7 @@ All of these are automatically built and deployed by [GitHub Actions](https://gi
 
     `ctest` or `mixxx-test` (Useful if you wish to run the test with a debugger)
 
-## Pre-commit Setup {#pre-commit}
+## Pre-commit Setup
 
 Install [pre-commit](https://pre-commit.com/#install) to automatically ensure that your commits comply with our code style for both C++ and JavaScript. This saves time reviewing so we don't have to point out nitpicky style issues. Once you have pre-commit installed on your computer, set it up in your local Git repository:
 
