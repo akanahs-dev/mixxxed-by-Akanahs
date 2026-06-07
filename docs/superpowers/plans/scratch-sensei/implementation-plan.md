@@ -37,9 +37,12 @@ These choices are fixed for V1 implementation:
 - **Storage:** Store one `ScratchSenseiTrackAnalysis` artifact per track in `track_analysis` through `AnalysisDao`. Re-analysis replaces only the Scratch Sensei artifact for that track.
 - **Payload format:** Use protobuf under `src/proto/scratchsensei.proto`, matching Mixxx's existing protobuf build for waveform/beats/keys. Keep schema version and analyzer version inside the payload and in the `AnalysisDao::AnalysisInfo::version` string.
 - **Essentia:** `SCRATCH_SENSEI=ON` requires Essentia. If Essentia is not found when enabled, CMake fails with install/build guidance. No fallback RMS-only analyzer is allowed.
+- **Test provider boundary:** A fake provider may exist only in unit tests or dependency-injected test binaries. No user-visible app build, manual smoke, or production code path may analyze with fake provider output.
 - **First descriptor set:** V1 stores normalized energy curve, spectral flux curve, onset-density curve, beat-strength curve, section candidates, suggestions, evidence, and capability flags.
 - **Initial Essentia algorithm family:** Use source audio decoded by Mixxx and feed Essentia standard algorithms for frame/spectrum energy, onset functions, spectral flux, and rhythm/beat confidence. Confirm exact API names against the installed Essentia headers during Task 1, with `RhythmExtractor2013`, `OnsetDetection`, `Spectrum`, `RMS`, and flux/spectral change descriptors as the first target family.
 - **Cue promotion:** `Create Cue` creates a normal Mixxx cue with no hotcue index. `Promote to Hotcue` creates a normal Mixxx hotcue only after the user chooses/accepts an available hotcue slot.
+- **Re-analysis semantics:** The Scratch Sensei Analyze and Re-analyze buttons always replace only the Scratch Sensei artifact for the selected track. Do not add a separate analyzer option unless implementation proves the existing manual action cannot express replacement.
+- **V1 memory posture:** Full-track mono buffering is acceptable only with an explicit memory/duration guard. Long tracks should fail safely with a low-confidence/unsupported message or use a streaming/downsampled accumulator before shipping.
 
 ---
 
@@ -90,6 +93,7 @@ Create these files:
 - `src/test/scratchsenseisuggestionbuilder_test.cpp`
 - `src/test/scratchsenseianalysisdao_test.cpp`
 - `src/test/scratchsenseideckresolver_test.cpp`
+- `src/test/scratchsenseiprovider_test.cpp`
 
 Modify these files:
 
@@ -242,11 +246,19 @@ Modify `CMakeLists.txt` near the other optional feature flags:
 option(SCRATCH_SENSEI "Enable Scratch Sensei Essentia analysis" ON)
 ```
 
-Then add:
+Add Essentia discovery after the option is defined but before Scratch Sensei
+source files are compiled:
 
 ```cmake
 if(SCRATCH_SENSEI)
   find_package(Essentia REQUIRED)
+endif()
+```
+
+Add target definitions and linking only after `mixxx-lib` has been created:
+
+```cmake
+if(SCRATCH_SENSEI)
   target_compile_definitions(mixxx-lib PUBLIC __SCRATCH_SENSEI__)
   target_link_libraries(mixxx-lib PRIVATE Essentia::essentia)
 endif()
@@ -257,8 +269,31 @@ Expected behavior:
 - `-DSCRATCH_SENSEI=ON` fails at configure time if Essentia is missing.
 - `-DSCRATCH_SENSEI=OFF` keeps unrelated Mixxx builds possible.
 - No code path silently swaps in a non-Essentia analyzer.
+- CMake does not call `target_compile_definitions()` or `target_link_libraries()` before `mixxx-lib` exists.
 
-- [ ] **Step 3: Verify configure failure is loud**
+- [ ] **Step 3: Decide and document macOS Essentia install path**
+
+Before implementing provider code, choose one supported local development path:
+
+- Preferred for this fork: `ESSENTIA_ROOT=/path/to/essentia/install` pointing to headers and libraries built outside Mixxx.
+- Acceptable fallback: Homebrew or local package manager path if `FindEssentia.cmake` discovers it reliably.
+- Do not vendor Essentia source into Mixxx in V1 unless the user explicitly approves the repository size, license, and build-time cost.
+
+Document the chosen command in this plan or `docs/features/scratch-sensei.md`
+before moving beyond Task 1. The command must include the exact CMake configure
+shape, for example:
+
+```bash
+source tools/macos_buildenv.sh
+ESSENTIA_ROOT=/absolute/path/to/essentia/install cmake -S . -B build -DSCRATCH_SENSEI=ON -DBUILD_TESTING=ON
+```
+
+Expected:
+
+- The implementation agent knows how this fork discovers Essentia on macOS.
+- Missing Essentia has one obvious fix path.
+
+- [ ] **Step 4: Verify configure failure is loud**
 
 Temporarily configure without Essentia discoverable:
 
@@ -271,19 +306,20 @@ Expected:
 - CMake fails.
 - Error text says Essentia is required for Scratch Sensei and points to `ESSENTIA_ROOT` or the buildenv package path.
 
-- [ ] **Step 4: Verify configure success with Essentia**
+- [ ] **Step 5: Verify configure success with Essentia**
 
 After installing or pointing to Essentia:
 
 ```bash
 source tools/macos_buildenv.sh
-cmake -S . -B build -DSCRATCH_SENSEI=ON -DBUILD_TESTING=ON
+ESSENTIA_ROOT=/absolute/path/to/essentia/install cmake -S . -B build -DSCRATCH_SENSEI=ON -DBUILD_TESTING=ON
 ```
 
 Expected:
 
 - CMake configures.
 - Build output shows `SCRATCH_SENSEI` enabled.
+- Build output shows which Essentia include/library path was selected.
 
 ---
 
@@ -350,13 +386,14 @@ message Suggestion {
   optional string label = 3;
   optional double time_seconds = 4;
   optional int64 frame_position = 5;
-  optional double window_seconds = 6;
-  optional int32 beat_index = 7;
-  optional int32 bar_index = 8;
-  optional int32 phrase_index = 9;
-  optional double confidence = 10;
-  optional string confidence_bucket = 11;
-  optional Evidence evidence = 12;
+  optional double sample_rate = 6;
+  optional double window_seconds = 7;
+  optional int32 beat_index = 8;
+  optional int32 bar_index = 9;
+  optional int32 phrase_index = 10;
+  optional double confidence = 11;
+  optional string confidence_bucket = 12;
+  optional Evidence evidence = 13;
 }
 
 message Evidence {
@@ -569,6 +606,8 @@ Create provider structs in `scratchsenseianalysisprovider.h`:
 ```cpp
 #pragma once
 
+#include <span>
+
 #include <QString>
 #include <QVector>
 
@@ -594,7 +633,7 @@ class ScratchSenseiAnalysisProvider {
 
     virtual QString providerVersion() const = 0;
     virtual ProviderResult analyzeMonoSamples(
-            const QVector<float>& monoSamples,
+            std::span<const float> monoSamples,
             double sampleRate) = 0;
 };
 
@@ -613,7 +652,7 @@ Create `ScratchSenseiFakeProvider` that returns deterministic curves:
 - `bpm`: `128.0`
 - `beatConfidence`: `0.9`
 
-Use this provider for unit tests and UI wiring before Essentia is available.
+Use this provider for unit tests only. Production builds and manual smoke must use Essentia or fail loudly. If UI development needs deterministic data, inject the fake provider only in a test binary or unit test harness, never behind `SCRATCH_SENSEI=ON` in the normal app.
 
 - [ ] **Step 3: Build suggestions from descriptors**
 
@@ -643,6 +682,7 @@ Required assertions:
 - Missing beatgrid marks phrase/bar anchors unavailable without failing the entire analysis.
 - Capability flags accurately describe available timelines.
 - Confidence bucket thresholds match the spec.
+- The fake provider is not compiled into or selected by normal app builds.
 
 - [ ] **Step 5: Run suggestion tests**
 
@@ -665,7 +705,7 @@ Expected:
 - Create: `src/analyzer/scratchsensei/scratchsenseiessentiaprovider.h`
 - Create: `src/analyzer/scratchsensei/scratchsenseiessentiaprovider.cpp`
 - Modify: `CMakeLists.txt`
-- Test: provider boundary tests with small synthetic sample vectors
+- Test: `src/test/scratchsenseiprovider_test.cpp`
 
 - [ ] **Step 1: Initialize Essentia safely**
 
@@ -692,6 +732,7 @@ Rules:
 - Empty or corrupt audio returns an empty `ProviderResult` with `durationSeconds` set when known.
 - Descriptor timelines use seconds as the UI-facing anchor.
 - Frame positions are calculated later from track sample rate and `timeSeconds`.
+- Provider code accepts `std::span<const CSAMPLE>` or `std::vector<float>` only at the provider boundary. Avoid `QVector<float>` for full-track sample buffers in the analyzer worker.
 
 - [ ] **Step 3: Use the first Essentia algorithm family**
 
@@ -727,6 +768,7 @@ Expected:
 
 - Provider tests pass.
 - No test requires a full music file.
+- Tests prove fake provider is test-only and not selected by `SCRATCH_SENSEI=ON` production code.
 
 ---
 
@@ -776,11 +818,18 @@ This prevents a manual Scratch Sensei analysis from changing normal BPM, key, Re
 Responsibilities:
 
 - `initialize()` checks valid track, valid duration, provider availability, and whether re-analysis is requested by the caller.
-- `processSamples()` downmixes analysis samples into a mono buffer for the provider.
+- `processSamples()` downmixes analysis samples into a mono buffer or descriptor accumulator for the provider.
 - `storeResults()` runs provider analysis, builds the protobuf artifact, and saves it through `ScratchSenseiAnalysisDao`.
 - `cleanup()` clears sample buffers and pending state.
 
 Do not run Essentia on the real-time audio engine thread. This analyzer runs inside analyzer worker threads only.
+
+Memory guard:
+
+- Track the number of buffered mono samples and estimated bytes.
+- Set a V1 ceiling before shipping, such as 256 MB of mono samples or a duration limit chosen during implementation.
+- If the selected track exceeds the ceiling and a streaming accumulator is not implemented, save a failed/low-confidence artifact or surface a clear UI failure message instead of exhausting memory.
+- Prefer a streaming or windowed descriptor accumulator if Essentia APIs make it straightforward.
 
 - [ ] **Step 4: Add analyzer tests**
 
@@ -790,6 +839,7 @@ Required assertions with fake provider:
 - Re-analysis replaces only the Scratch Sensei artifact.
 - ScratchSenseiOnly mode does not create waveform, wavesummary, key, BPM, ReplayGain, or silence updates.
 - Cleanup clears buffered samples after failure.
+- A track exceeding the V1 memory/duration guard fails safely and clears buffers.
 
 - [ ] **Step 5: Run analyzer tests**
 
@@ -1014,14 +1064,16 @@ Mark analysis stale when:
 - Beatgrid snapshot availability/value differs from current track context.
 - Analyzer schema version does not match `scratch-sensei-v1`.
 
-- [ ] **Step 5: Run manual flow smoke with fake provider build**
+- [ ] **Step 5: Run manual flow smoke with Essentia**
 
-Run the app with the fake provider enabled through a test-only compile flag or dependency injection in tests.
+Run the normal app with `SCRATCH_SENSEI=ON` and Essentia available.
+
+Do not use the fake provider for manual app smoke. Fake output is allowed only in unit tests or test harness binaries.
 
 Expected:
 
 - Analyze button starts progress.
-- Completion loads fake suggestions.
+- Completion loads Essentia-backed suggestions.
 - Re-analysis replaces the stored artifact.
 - No default Mixxx analysis values are changed by Scratch Sensei analysis.
 
@@ -1117,7 +1169,8 @@ Rules:
 
 - Use `Cue::kNoHotCue` for Create Cue.
 - Use suggestion frame position when present.
-- Convert `timeSeconds` to frame position when frame position is absent.
+- Convert `timeSeconds` to frame position only when a reliable sample rate is available from the payload, current track, or audio source metadata.
+- Disable Create Cue and show a clear UI failure if neither frame position nor sample rate is available.
 - Label/color can stay default in V1 unless existing Mixxx cue APIs require a value.
 - Do not write Scratch Sensei ownership metadata to cues.
 
@@ -1236,6 +1289,8 @@ Expected:
 
 - [ ] `SCRATCH_SENSEI=ON` requires Essentia and fails loudly without it.
 - [ ] No fallback non-Essentia analyzer exists.
+- [ ] Fake provider is available only to unit tests or test harness binaries, not normal app or manual smoke builds.
+- [ ] Full-track buffering has an explicit V1 memory/duration guard or streaming descriptor accumulator.
 - [ ] Scratch Sensei analysis only runs after the user clicks Analyze/Re-analyze.
 - [ ] Scratch Sensei analysis does not run in normal track-load or batch-analysis paths.
 - [ ] Stored artifact is `ScratchSenseiTrackAnalysis`.

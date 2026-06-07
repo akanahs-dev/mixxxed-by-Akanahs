@@ -60,6 +60,7 @@ This file tracks the freshness, verification matrices, open conflicts, and renam
 - 2026-06-07: Added Scratch Sensei implementation-agent setup guidance: local Mixxx docs and contribution rules are required; external Qt/C++/CMake/audio skills are optional review lenses only.
 - 2026-06-07: Clarified Scratch Sensei spec review status by separating resolved V1 decisions from implementation-plan decisions.
 - 2026-06-07: Added Scratch Sensei V1 clean-room implementation plan with build, analysis contract, DAO storage, analyzer, UI, cue promotion, and validation phases.
+- 2026-06-07: Patched Scratch Sensei implementation-plan review findings: CMake target placement, test-only fake provider boundary, Essentia install path, analysis memory guard, re-analysis replacement semantics, and sample-rate-safe cue creation.
 - 2026-06-07: Kept broad DJ skill and curated practice references as later-version reference material, not V1 scope.
 
 ---
