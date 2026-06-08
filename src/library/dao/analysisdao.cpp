@@ -256,6 +256,33 @@ bool AnalysisDao::deleteAnalysesForTrack(TrackId trackId) {
     return true;
 }
 
+bool AnalysisDao::deleteAnalysesForTrackByType(TrackId trackId, AnalysisType type) {
+    if (!trackId.isValid()) {
+        return false;
+    }
+    QSqlQuery query(m_database);
+    query.prepare(QString(
+        "SELECT id FROM %1 WHERE track_id = :track_id AND type = :type").arg(s_analysisTableName));
+    query.bindValue(":track_id", trackId.toVariant());
+    query.bindValue(":type", type);
+
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query) << "couldn't delete analyses for track" << trackId << "and type" << type;
+        return false;
+    }
+
+    QList<int> analysesToDelete;
+    const int idColumn = query.record().indexOf("id");
+    while (query.next()) {
+        analysesToDelete.append(
+            query.value(idColumn).toInt());
+    }
+    for (int analysisId : analysesToDelete) {
+        deleteAnalysis(analysisId);
+    }
+    return true;
+}
+
 QDir AnalysisDao::getAnalysisStoragePath() const {
     QString settingsPath = m_pConfig->getSettingsPath();
     QDir dir(settingsPath.append("/analysis/"));

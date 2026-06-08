@@ -37,4 +37,5 @@ protobuf_generate(
     keys.proto
     skin.proto
     waveform.proto
+    scratchsensei.proto
 )

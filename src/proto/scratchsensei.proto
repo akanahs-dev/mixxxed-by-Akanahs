@@ -1,0 +1,64 @@
+syntax = "proto2";
+
+package mixxx.track.io;
+
+option optimize_for = LITE_RUNTIME;
+
+message ScratchSenseiTrackAnalysis {
+  optional string schema_version = 1;
+  optional string analyzer_version = 2;
+  optional int64 track_id = 3;
+  optional string audio_fingerprint = 4;
+  optional double duration_seconds = 5;
+  optional BeatgridSnapshot beatgrid_snapshot = 6;
+  optional CapabilityFlags capabilities = 7;
+  repeated DescriptorTimeline descriptor_timeline = 8;
+  repeated Suggestion suggestion = 9;
+}
+
+message BeatgridSnapshot {
+  optional bool available = 1;
+  optional double bpm = 2;
+  optional string source = 3;
+  optional string fingerprint = 4;
+}
+
+message CapabilityFlags {
+  optional bool has_energy_curve = 1;
+  optional bool has_phrase_candidates = 2;
+  optional bool has_beatgrid_snapshot = 3;
+  optional bool has_reliable_tempo = 4;
+  optional bool has_suggestion_evidence = 5;
+  optional bool analysis_stale = 6;
+  optional string low_confidence_reason = 7;
+}
+
+message DescriptorTimeline {
+  optional string name = 1;
+  optional double hop_seconds = 2;
+  repeated double value = 3;
+}
+
+message Suggestion {
+  optional string id = 1;
+  optional string type = 2;
+  optional string label = 3;
+  optional double time_seconds = 4;
+  optional int64 frame_position = 5;
+  optional double sample_rate = 6;
+  optional double window_seconds = 7;
+  optional int32 beat_index = 8;
+  optional int32 bar_index = 9;
+  optional int32 phrase_index = 10;
+  optional double confidence = 11;
+  optional string confidence_bucket = 12;
+  optional Evidence evidence = 13;
+}
+
+message Evidence {
+  optional double energy_delta = 1;
+  optional double spectral_flux = 2;
+  optional double onset_density = 3;
+  optional double beat_strength = 4;
+  optional string reason = 5;
+}

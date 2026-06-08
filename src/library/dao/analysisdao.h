@@ -16,7 +16,8 @@ class AnalysisDao : public DAO {
     enum AnalysisType {
         TYPE_UNKNOWN = 0,
         TYPE_WAVEFORM,
-        TYPE_WAVESUMMARY
+        TYPE_WAVESUMMARY,
+        TYPE_SCRATCHSENSEI_TRACK_ANALYSIS
     };
 
     struct AnalysisInfo {
@@ -51,6 +52,7 @@ class AnalysisDao : public DAO {
     bool deleteAnalysis(const int analysisId);
     void deleteAnalyses(const QList<TrackId>& trackIds);
     bool deleteAnalysesForTrack(TrackId trackId);
+    bool deleteAnalysesForTrackByType(TrackId trackId, AnalysisType type);
 
     void saveTrackAnalyses(
             TrackId trackId,
