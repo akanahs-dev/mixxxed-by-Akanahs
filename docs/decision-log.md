@@ -3,9 +3,9 @@
 Doc type: decision-log
 Owner: current-agent-or-team
 Status: active
-Last updated: 2026-06-06
-Last verified: 2026-06-06
-Verified against: docs/intake/inferred-decisions.md
+Last updated: 2026-06-08
+Last verified: 2026-06-08
+Verified against: docs/intake/inferred-decisions.md, docs/adr/0005-scratch-sensei-v2-tensorflow.md
 Confidence: high
 Canonical source: `docs/decision-log.md`
 Related docs: `README.md`, `architecture.md`, `data-model.md`
@@ -245,5 +245,35 @@ Generated suggestions are analysis output, not user intent. Keeping them out of 
 - No cue `source` or `confidence` schema columns are needed in V1.
 - The artifact reserves future training-platform use through stable suggestion IDs, musical anchors, descriptor timelines, evidence fields, and capability flags.
 - Future descriptor expansion should evolve the serialized payload, not introduce SQL columns by default.
+
+---
+
+## DL-010: Scratch Sensei V2 TensorFlow Integration
+
+Status: active
+Confidence: high
+
+### Decision
+
+Scratch Sensei V2 will integrate pre-trained TensorFlow models via Essentia's `TensorflowPredict` algorithm family to provide deep neural network-based MIR: advanced segmentation, mood classification, vocal/instrumental detection, and high-level tagging.
+
+### Rationale
+
+Essentia already exposes a TensorFlow inference layer through its `TensorflowPredict*` algorithms. Leveraging it keeps the integration inside the same Essentia provider boundary defined in V1, avoids a separate TF runtime dependency in the core Mixxx source, and lets V2 models be upgraded without touching the Mixxx build or source code.
+
+### Evidence
+
+- `docs/adr/0005-scratch-sensei-v2-tensorflow.md`
+- `docs/superpowers/plans/scratch-sensei/spec.md` (Future Training Platform Reserve)
+
+### Consequences
+
+- Essentia must be recompiled with `--with-tensorflow` (`brew reinstall mtg/essentia/essentia --with-tensorflow`).
+- CMake will detect TensorFlow availability and gate V2 features accordingly.
+- Model `.pb` files are stored at `~/.mixxx/models/` (user-configurable), not in the source tree.
+- Model graphs load lazily on first analysis, on the async analyzer worker thread — never on the UI or audio thread.
+- If models are absent or TF init fails, Scratch Sensei falls back to V1 classic Essentia analysis with a UI warning.
+- `ScratchSenseiTrackAnalysis` protobuf schema will be extended to hold ML classification vectors and confidence scores.
+- V1 analysis cache entries remain valid and readable; V2 output is additive.
 
 ---

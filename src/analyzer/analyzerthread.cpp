@@ -9,6 +9,10 @@
 #include "analyzer/analyzersilence.h"
 #include "analyzer/analyzerwaveform.h"
 #include "analyzer/constants.h"
+#include "analyzer/scratchsensei/scratchsenseianalyzer.h"
+#if defined(__SCRATCH_SENSEI__)
+#include "analyzer/scratchsensei/scratchsenseiessentiaprovider.h"
+#endif
 #include "library/dao/analysisdao.h"
 #include "moc_analyzerthread.cpp"
 #include "sources/audiosourcestereoproxy.h"
@@ -93,28 +97,46 @@ void AnalyzerThread::doRun() {
     // before returning from this function.
     mixxx::DbConnectionPooler dbConnectionPooler;
 
-    if (m_modeFlags & AnalyzerModeFlags::WithWaveform) {
+    if (m_modeFlags & AnalyzerModeFlags::ScratchSenseiOnly) {
         dbConnectionPooler = mixxx::DbConnectionPooler(m_dbConnectionPool); // move assignment
         if (!dbConnectionPooler.isPooling()) {
             kLogger.warning()
                     << "Failed to obtain database connection for analyzer thread";
             return;
         }
+#if defined(__SCRATCH_SENSEI__)
         QSqlDatabase dbConnection = mixxx::DbConnectionPooled(m_dbConnectionPool);
-        m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerWaveform>(m_pConfig, dbConnection)));
+        auto provider = std::make_unique<mixxx::scratchsensei::ScratchSenseiEssentiaProvider>();
+        m_analyzers.push_back(AnalyzerWithState(std::make_unique<mixxx::scratchsensei::AnalyzerScratchSensei>(
+                m_pConfig, dbConnection, std::move(provider))));
+#else
+        kLogger.warning() << "Scratch Sensei is enabled but compiled out.";
+        return;
+#endif
+    } else {
+        if (m_modeFlags & AnalyzerModeFlags::WithWaveform) {
+            dbConnectionPooler = mixxx::DbConnectionPooler(m_dbConnectionPool); // move assignment
+            if (!dbConnectionPooler.isPooling()) {
+                kLogger.warning()
+                        << "Failed to obtain database connection for analyzer thread";
+                return;
+            }
+            QSqlDatabase dbConnection = mixxx::DbConnectionPooled(m_dbConnectionPool);
+            m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerWaveform>(m_pConfig, dbConnection)));
+        }
+        if (AnalyzerGain::isEnabled(ReplayGainSettings(m_pConfig))) {
+            m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerGain>(m_pConfig)));
+        }
+        if (AnalyzerEbur128::isEnabled(ReplayGainSettings(m_pConfig))) {
+            m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerEbur128>(m_pConfig)));
+        }
+        // BPM detection might be disabled in the config, but can be overridden
+        // and enabled by explicitly setting the mode flag.
+        const bool enforceBpmDetection = (m_modeFlags & AnalyzerModeFlags::WithBeats) != 0;
+        m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerBeats>(m_pConfig, enforceBpmDetection)));
+        m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerKey>(m_pConfig)));
+        m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerSilence>(m_pConfig)));
     }
-    if (AnalyzerGain::isEnabled(ReplayGainSettings(m_pConfig))) {
-        m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerGain>(m_pConfig)));
-    }
-    if (AnalyzerEbur128::isEnabled(ReplayGainSettings(m_pConfig))) {
-        m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerEbur128>(m_pConfig)));
-    }
-    // BPM detection might be disabled in the config, but can be overridden
-    // and enabled by explicitly setting the mode flag.
-    const bool enforceBpmDetection = (m_modeFlags & AnalyzerModeFlags::WithBeats) != 0;
-    m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerBeats>(m_pConfig, enforceBpmDetection)));
-    m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerKey>(m_pConfig)));
-    m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerSilence>(m_pConfig)));
     DEBUG_ASSERT(!m_analyzers.empty());
     kLogger.debug() << "Activated" << m_analyzers.size() << "analyzers";
 

@@ -3,15 +3,15 @@
 Doc type: doc-health
 Owner: current-agent-or-team
 Status: active
-Last updated: 2026-06-07
-Last verified: 2026-06-07
-Verified against: docs/, `docs/features/scratch-sensei.md`, `docs/adr/`, `docs/superpowers/plans/scratch-sensei/spec.md`, `docs/superpowers/plans/scratch-sensei/design.md`, `docs/superpowers/plans/scratch-sensei/README.md`, `docs/superpowers/plans/scratch-sensei/implementation-plan.md`
+Last updated: 2026-06-08
+Last verified: 2026-06-08
+Verified against: docs/, `docs/features/scratch-sensei.md`, `docs/adr/`, `docs/decision-log.md`, `docs/feature-registry.md`
 Confidence: high
 Canonical source: `docs/doc-health.md`
 Related docs: `README.md`, `feature-registry.md`, `decision-log.md`
-Last full audit: 2026-06-02
-Known stale areas: none inside the fresh Scratch Sensei V1 docs
-Open doc conflicts: none inside the fresh Scratch Sensei V1 docs
+Last full audit: 2026-06-08
+Known stale areas: none
+Open doc conflicts: none
 
 This file tracks the freshness, verification matrices, open conflicts, and renames across the canonical Mixxx documentation set.
 
@@ -19,10 +19,10 @@ This file tracks the freshness, verification matrices, open conflicts, and renam
 
 ## Health Summary
 
-- **Last full audit**: 2026-06-02
-- **Current overall confidence**: high for the fresh Scratch Sensei V1 docs shape
-- **Known stale areas**: none inside the fresh Scratch Sensei V1 docs
-- **Open doc conflicts**: none inside the fresh Scratch Sensei V1 docs
+- **Last full audit**: 2026-06-08
+- **Current overall confidence**: high
+- **Known stale areas**: none
+- **Open doc conflicts**: none
 
 ---
 
@@ -34,23 +34,29 @@ This file tracks the freshness, verification matrices, open conflicts, and renam
 | `architecture.md` | 2026-06-02 | `src/main.cpp`, `src/coreservices.cpp`, `src/control/controlobject.h`, `res/schema.xml` | high | None |
 | `data-model.md` | 2026-06-02 | `res/schema.xml`, `src/track/track.h`, `src/track/trackrecord.h`, `src/library/trackcollectionmanager.h` | high | None |
 | `testing-strategy.md` | 2026-06-02 | `src/test/main.cpp`, `CMakeLists.txt` | high | None |
-| `decision-log.md` | 2026-06-07 | Scratch Sensei V1 ADRs and spec | high | Fresh V1 decisions recorded |
-| `feature-registry.md` | 2026-06-07 | `docs/features/scratch-sensei.md`, `docs/superpowers/plans/scratch-sensei/spec.md`, `docs/superpowers/plans/scratch-sensei/implementation-plan.md` | high | Scratch Sensei now points to fresh V1 spec and implementation plan |
+| `decision-log.md` | 2026-06-08 | Scratch Sensei V1 ADRs, spec, ADR 0005 V2 TF decision | high | DL-010 added for V2 TF integration |
+| `feature-registry.md` | 2026-06-08 | `docs/features/scratch-sensei.md`, `docs/adr/0005-scratch-sensei-v2-tensorflow.md` | high | V1 marked complete; V2 TensorFlow integration added as rank-1 in-progress work |
 | `features/vibe-coding-experiments.md` | 2026-06-02 | `docs/` scaffolding progress | high | None |
-| `features/scratch-sensei.md` | 2026-06-07 | `docs/superpowers/plans/scratch-sensei/spec.md`, `docs/superpowers/plans/scratch-sensei/implementation-plan.md` | high | Planned; implementation intentionally absent |
+| `features/scratch-sensei.md` | 2026-06-08 | `docs/adr/0005-scratch-sensei-v2-tensorflow.md`, `docs/decision-log.md` (DL-010) | high | V2 decisions section added; implementation checklist extended with V2 tasks; Exact Next Prompt updated |
 | `superpowers/plans/scratch-sensei/README.md` | 2026-06-07 | Scratch Sensei plan folder contents | high | Fresh folder index with implementation plan |
-| `superpowers/plans/scratch-sensei/spec.md` | 2026-06-07 | User-approved V1 direction | medium | Implementation plan written; awaiting user review/approval before code |
+| `superpowers/plans/scratch-sensei/spec.md` | 2026-06-07 | User-approved V1 direction | medium | V1 spec; V2 spec will be a separate doc |
 | `superpowers/plans/scratch-sensei/design.md` | 2026-06-07 | `spec.md` | medium | Flows, diagrams, state model, and UI behavior added |
-| `superpowers/plans/scratch-sensei/implementation-plan.md` | 2026-06-07 | `spec.md`, `design.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/architecture.md`, `AnalysisDao`, analyzer and library feature source anchors | medium | Clean-room phased implementation plan ready for user review |
+| `superpowers/plans/scratch-sensei/implementation-plan.md` | 2026-06-07 | `spec.md`, `design.md`, `CONTRIBUTING.md`, `AGENTS.md` | medium | V1 complete; plan doc accurate |
 | `adr/0001-scratch-sensei-native-rebuild.md` | 2026-06-07 | `spec.md` | high | Native Mixxx feature decision |
 | `adr/0002-scratch-sensei-required-essentia.md` | 2026-06-07 | `spec.md` | high | Essentia required for V1 |
 | `adr/0003-scratch-sensei-v1-scope.md` | 2026-06-07 | `spec.md` | high | Loaded-deck Prepare Track only |
 | `adr/0004-scratch-sensei-analysis-summary-only.md` | 2026-06-07 | `spec.md`, `design.md`, `AnalysisDao` shape | high | Suggestions stay out of cue rows; `track_analysis` cache used for analysis contract |
+| `adr/0005-scratch-sensei-v2-tensorflow.md` | 2026-06-08 | `decision-log.md` (DL-010), user approval | high | New ADR for V2 TF integration; lazy loading, graceful fallback, model path conventions |
 
 ---
 
 ## Conflicts and Corrections
 
+- 2026-06-08: V1 fully implemented, compiled, and all 14 unit tests passing on ARM64 macOS. Docs updated to reflect V1 complete state.
+- 2026-06-08: ADR 0005 added: Scratch Sensei V2 TensorFlow integration. Essentia TF rebuild required; lazy model loading; graceful fallback; protobuf schema extension; model files stored at `~/.mixxx/models/`.
+- 2026-06-08: DL-010 added to decision-log for V2 TF decision.
+- 2026-06-08: `feature-registry.md` updated: Scratch Sensei V1 marked `complete`; V2 TensorFlow added as `in_progress` rank-1 item.
+- 2026-06-08: `features/scratch-sensei.md` updated: V2 Decisions section added; implementation checklist V2 tasks added; Exact Next Prompt updated to Essentia TF rebuild.
 - 2026-06-07: Established the Scratch Sensei V1 source-of-truth spec.
 - 2026-06-07: Kept the active Scratch Sensei docs to the V1 spec, folder index, four ADRs, and future lesson references.
 - 2026-06-07: Recorded four V1 decisions: native Mixxx feature, required Essentia, loaded-deck Prepare Track only, and analysis-summary-only suggestions.

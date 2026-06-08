@@ -31,6 +31,9 @@
 #include "library/trackset/playlistfeature.h"
 #include "library/trackset/setlogfeature.h"
 #include "library/traktor/traktorfeature.h"
+#ifdef __SCRATCH_SENSEI__
+#include "library/scratchsensei/scratchsenseifeature.h"
+#endif
 #include "mixer/playermanager.h"
 #include "moc_library.cpp"
 #include "util/assert.h"
@@ -162,6 +165,11 @@ Library::Library(
             m_pAnalysisFeature,
             &AnalysisFeature::analyzeTracks);
     addFeature(m_pAnalysisFeature);
+
+#ifdef __SCRATCH_SENSEI__
+    m_pScratchSenseiFeature = make_parented<ScratchSenseiFeature>(this, m_pConfig, pPlayerManager);
+    addFeature(m_pScratchSenseiFeature);
+#endif
     // Suspend a batch analysis while an ad-hoc analysis of
     // loaded tracks is in progress and resume it afterwards.
     connect(pPlayerManager,

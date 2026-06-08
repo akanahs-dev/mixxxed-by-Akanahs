@@ -28,6 +28,9 @@ class MixxxLibraryFeature;
 class PlayerManager;
 class PlaylistFeature;
 class RecordingManager;
+#ifdef __SCRATCH_SENSEI__
+class ScratchSenseiFeature;
+#endif
 class SidebarModel;
 class TrackCollectionManager;
 class WSearchLineEdit;
@@ -203,6 +206,9 @@ class Library: public QObject {
     parented_ptr<CrateFeature> m_pCrateFeature;
     parented_ptr<BrowseFeature> m_pBrowseFeature;
     parented_ptr<AnalysisFeature> m_pAnalysisFeature;
+#ifdef __SCRATCH_SENSEI__
+    parented_ptr<ScratchSenseiFeature> m_pScratchSenseiFeature;
+#endif
     QFont m_trackTableFont;
     int m_iTrackTableRowHeight;
     bool m_editMetadataSelectedClick;

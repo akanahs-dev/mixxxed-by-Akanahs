@@ -4679,6 +4679,42 @@ if(RUBBERBAND)
   )
 endif()
 
+# Scratch Sensei
+option(SCRATCH_SENSEI "Enable Scratch Sensei Essentia analysis" ON)
+if(SCRATCH_SENSEI)
+  find_package(Essentia REQUIRED)
+  target_compile_definitions(mixxx-lib PUBLIC __SCRATCH_SENSEI__)
+  target_link_libraries(mixxx-lib PRIVATE Essentia::essentia)
+
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/analyzer/scratchsensei/scratchsenseianalyzer.cpp
+      src/analyzer/scratchsensei/scratchsenseisummary.cpp
+      src/analyzer/scratchsensei/scratchsenseisuggestionbuilder.cpp
+      src/analyzer/scratchsensei/scratchsenseianalysisdao.cpp
+      src/analyzer/scratchsensei/scratchsenseiessentiaprovider.cpp
+      src/library/scratchsensei/scratchsenseifeature.cpp
+      src/library/scratchsensei/dlgscratchsensei.cpp
+      src/library/scratchsensei/wscratchsenseitimeline.cpp
+      src/library/scratchsensei/dlgscratchsensei.ui
+  )
+
+  if(BUILD_TESTING)
+    target_sources(
+      mixxx-test
+      PRIVATE
+        src/test/scratchsenseisummary_test.cpp
+        src/test/scratchsenseisuggestionbuilder_test.cpp
+        src/test/scratchsenseianalysisdao_test.cpp
+        src/test/scratchsenseideckresolver_test.cpp
+        src/test/scratchsenseiprovider_test.cpp
+        src/test/scratchsenseianalyzer_test.cpp
+    )
+    target_link_libraries(mixxx-test PRIVATE Essentia::essentia)
+  endif()
+endif()
+
 # SndFile
 find_package(SndFile REQUIRED)
 target_link_libraries(mixxx-lib PRIVATE SndFile::sndfile)
